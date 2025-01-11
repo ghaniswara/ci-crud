@@ -115,4 +115,22 @@ class ArticleModel extends Model
         $json = json_encode($data, JSON_PRETTY_PRINT);
         $this->minioStorage->putJSON($json, $data['uuid'], $this->minioStorage->ArticleBucket);
     }
+
+    public function deleteArticle($data)
+    {
+        $this->delete($data['id']);
+        try {
+            $this->redisCache->getClient()->del($this->articlePrefix . $data['id']);
+            $this->redisCache->getClient()->del($this->frontpage_articles);
+        } catch (\Exception $e) {
+            error_log('Failed to delete cache: ' . $e->getMessage());
+        }
+
+        try {
+            $this->minioStorage->deleteObject($data['object_path'], $this->minioStorage->ArticleBucket);
+        } catch (\Exception $e) {
+            error_log('Failed to delete object from MinIO: ' . $e->getMessage());
+        }
+    }
 }
+

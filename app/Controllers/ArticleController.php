@@ -160,27 +160,11 @@ class ArticleController extends Controller
         $model = new ArticleModel();
         $article = $model->find($id);
 
-        $objectPath = $article['object_path'];
-
-        try {
-            $model->delete($id);
-        } catch (\Exception $e) {
-            return redirect()->to('/articles')->with('error', 'Failed to delete article: ' . $e->getMessage());
+        if (!$article) {
+            return redirect()->to('/articles')->with('error', 'Article not found.');
         }
 
-        try {
-            $this->minioStorage->deleteObject($objectPath, $this->minioStorage->ArticleBucket);
-        } catch (\Exception $e) {
-            error_log('Failed to delete object from MinIO: ' . $e->getMessage());
-        }
-
-        try {
-            if ($this->redisCache->getClient()->exists($article['uuid'])) {
-                $this->redisCache->getClient()->del($article['uuid']);
-            }
-        } catch (\Exception $e) {
-            error_log('Failed to delete cache: ' . $e->getMessage());
-        }
+        $model->deleteArticle($article);
 
         return redirect()->to('/articles');
     }
